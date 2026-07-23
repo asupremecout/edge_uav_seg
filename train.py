@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from models.unet import get_unet
 import argparse
 from pathlib import Path
+from losses.combined_loss import conbined_loss
 
 device=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu") 
 amp_enabled = device.type == "cuda"
@@ -53,6 +54,17 @@ def plot_loss_curve(loss_values, save_path=None, show=False):
     plt.close()
 
 
+
+
+def store_model(model,output_dir):
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    pth_path = output_dir+"unet_uavid_10e.pth"
+    torch.save(model.state_dict(), pth_path)
+    print(f"Model weights saved to: {pth_path}")
+
+
+
 if __name__=="__main__":
     parser=argparse.ArgumentParser()
     parser.add_argument('--lr',type=float,default=1e-3,help="learing_rate")
@@ -65,6 +77,8 @@ if __name__=="__main__":
     parser.add_argument('--show_loss_plot', action='store_true', help='show loss curve after training')
     parser.add_argument('--crop_size', default=256, type=int, help='random/center crop size')
 
+    parser.add_argument('--resume', default=False, type=str,action='store_true', help='resume training from checkpoint')
+    
     args=parser.parse_args()
     
     argment=True if  args.mode=="train" else False
@@ -75,13 +89,22 @@ if __name__=="__main__":
     dataloader=DataLoader(MyDataset,batch_size=args.batch_size,shuffle=(args.mode=="train"),num_workers=0)
 
 
-
-    model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
+    if args.resume:
+        model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
+        output_dir = Path(__file__).resolve().parent / "output"
+        pth_path = output_dir / "unet_uavid_10e.pth"
+        if pth_path.exists():
+            model.load_state_dict(torch.load(pth_path, map_location=device))
+            print(f"Resumed training from checkpoint: {pth_path}")
+        else:
+            print(f"No checkpoint found at: {pth_path}. Starting training from scratch.")
+    else:
+        model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
     
 
 
     total_loss=[]
-    loss=nn.CrossEntropyLoss()
+    loss=conbined_loss
     scaler = GradScaler(enabled=amp_enabled) if amp_enabled else None
     if args.optim=="Adam":
         optimizer=optim.Adam(model.parameters(),lr=args.lr)
@@ -116,9 +139,12 @@ if __name__=="__main__":
 
     plot_loss_curve(total_loss, save_path=args.loss_plot, show=args.show_loss_plot)
 
-    
-
-    
+    # ---- 保存模型 ----
+    output_dir = Path(__file__).resolve().parent / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    pth_path = output_dir+"unet_uavid_10e.pth"
+    torch.save(model.state_dict(), pth_path)
+    print(f"Model weights saved to: {pth_path}")
 
 
 

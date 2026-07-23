@@ -1,0 +1,19 @@
+# ---- 数据集 ----
+datasets/
+
+# ---- Python 缓存 ----
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ---- 训练输出 ----
+output/
+results/
+*.png
+
+# ---- IDE / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
