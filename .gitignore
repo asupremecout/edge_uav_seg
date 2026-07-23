@@ -1,5 +1,6 @@
 # ---- 数据集 ----
-datasets/
+datasets/UAV_data
+datasets/UAVidToolKit
 
 # ---- Python 缓存 ----
 __pycache__/
