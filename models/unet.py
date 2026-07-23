@@ -8,10 +8,10 @@ class DoubleConv(nn.Module): #蓝色箭头
         super().__init__()
         self.layer=nn.Sequential(
 
-            nn.Conv2d(in_channels=in_channels,out_channels=out_channels,kernel_size=3),
+            nn.Conv2d(in_channels=in_channels,out_channels=out_channels,kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(),
-            nn.Conv2d(in_channels=out_channels,out_channels=out_channels,kernel_size=3),
+            nn.Conv2d(in_channels=out_channels,out_channels=out_channels,kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.ReLU()
         )
@@ -22,8 +22,9 @@ class DoubleConv(nn.Module): #蓝色箭头
 
 class  DownSample(nn.Module):
     def __init__(self,in_channels,out_channels):
+        super().__init__()
         self.layer=nn.Sequential(
-            nn.MaxPool2d(stride=2,kernel_size=3),
+            nn.MaxPool2d(stride=2,kernel_size=3, padding=1),
             DoubleConv(in_channels,out_channels)
         )
     def forward(self,x):
@@ -52,6 +53,7 @@ class UpSample(nn.Module): #处理上采样：转置卷积（恢复分辨率） 
         x = F.pad(x, [diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2])
 
         x=torch.cat([x,skip_connect],dim=1)
+        x=self.conv(x)
 
         return x
 
@@ -64,7 +66,7 @@ class OutConv(nn.Module):
         return self.layer(x)
 
 class UNet(nn.Module):
-    def __init__(self,in_channels=3,num_classes=6,out_features=64):
+    def __init__(self,in_channels=3,num_classes=8,out_features=64):
         super().__init__()
         self.in_channels=in_channels
         self.num_classes=num_classes
@@ -98,5 +100,5 @@ class UNet(nn.Module):
 
         return logits
     
-def get_unet(in_channels=3,num_classes=6,out_features=64):
+def get_unet(in_channels=3,num_classes=8,out_features=64):
     return UNet(in_channels=in_channels,num_classes=num_classes,out_features=out_features)

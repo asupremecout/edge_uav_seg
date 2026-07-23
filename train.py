@@ -1,0 +1,127 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from datasets.UAVdatasets import UAVIDDataset
+from torch.utils.data import DataLoader
+from models.unet import get_unet
+import argparse
+from pathlib import Path
+
+device=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu") 
+amp_enabled = device.type == "cuda"
+
+if amp_enabled:
+    from torch.cuda.amp import autocast, GradScaler
+
+
+else:
+    autocast = None
+    GradScaler = None
+
+
+def plot_loss_curve(loss_values, save_path=None, show=False):
+    """Plot and optionally save the training loss curve."""
+    if not loss_values:
+        print("No loss values to plot.")
+        return
+
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("matplotlib is not installed, skip loss visualization.")
+        return
+
+    epochs = list(range(1, len(loss_values) + 1))
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, loss_values, marker='o', linewidth=2, label='Train Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Training Loss Curve')
+    plt.grid(True, linestyle='--', alpha=0.4)
+    plt.legend()
+    plt.tight_layout()
+
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=200)
+        print(f'Loss curve saved to: {save_path}')
+
+    if show:
+        plt.show()
+
+    plt.close()
+
+
+if __name__=="__main__":
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--lr',type=float,default=1e-3,help="learing_rate")
+    
+    parser.add_argument('--epoch',default=5,type=int)
+    parser.add_argument('--batch_size',default=1,type=int)
+    parser.add_argument('--optim',default="Adam",type=str)
+    parser.add_argument('--mode',default="train",choices=("train", "val"),type=str)
+    parser.add_argument('--loss_plot', default='loss_curve.png', type=str, help='path to save loss curve image')
+    parser.add_argument('--show_loss_plot', action='store_true', help='show loss curve after training')
+    parser.add_argument('--crop_size', default=256, type=int, help='random/center crop size')
+
+    args=parser.parse_args()
+    
+    argment=True if  args.mode=="train" else False
+
+
+    data_root = Path(__file__).resolve().parent / "datasets" / "UAV_data" / "uavid_v1.5_official_release_image"
+    MyDataset=UAVIDDataset(root=str(data_root), split=args.mode, crop_size=args.crop_size, augment=argment)
+    dataloader=DataLoader(MyDataset,batch_size=args.batch_size,shuffle=(args.mode=="train"),num_workers=0)
+
+
+
+    model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
+    
+
+
+    total_loss=[]
+    loss=nn.CrossEntropyLoss()
+    scaler = GradScaler(enabled=amp_enabled) if amp_enabled else None
+    if args.optim=="Adam":
+        optimizer=optim.Adam(model.parameters(),lr=args.lr)
+    elif args.optim=="SGD":
+        optimizer=optim.SGD(model.parameters(),lr=args.lr,momentum=0.9)
+    else:
+        raise ValueError("optimizer must be Adam or SGD")
+
+    for i in range(args.epoch):
+        model.train()
+        epoch_loss=0
+        if len(dataloader) == 0:
+            raise RuntimeError("DataLoader is empty. Check dataset path and split.")
+        for batch_idex,(img,mask) in enumerate(dataloader):
+            img=img.to(device)
+            mask=mask.to(device)
+            with autocast(enabled=amp_enabled):
+                pred=model(img)
+                l=loss(pred,mask)
+            epoch_loss+=l.item()
+            
+            optimizer.zero_grad()
+            if amp_enabled:
+                scaler.scale(l).backward()
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                l.backward()
+                optimizer.step()
+
+        total_loss.append(epoch_loss / len(dataloader))
+
+    plot_loss_curve(total_loss, save_path=args.loss_plot, show=args.show_loss_plot)
+
+    
+
+    
+
+
+
+
+
+
