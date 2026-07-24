@@ -123,8 +123,7 @@ class ASPP(nn.Module):
 
         self.global_avg_pooling=nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_channels=in_channels,out_channels=out_channels,kernel_size=1,bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.Conv2d(in_channels=in_channels,out_channels=out_channels,kernel_size=1,bias=True),
             nn.ReLU(inplace=True)
         )
 

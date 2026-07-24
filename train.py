@@ -4,6 +4,7 @@ import torch.optim as optim
 from datasets.UAVdatasets import UAVIDDataset
 from torch.utils.data import DataLoader
 from models.unet import get_unet
+from models.deeplabv3 import get_DeepLabV3
 import argparse
 from pathlib import Path
 from losses.combined_loss import conbined_loss
@@ -76,7 +77,7 @@ if __name__=="__main__":
     parser.add_argument('--loss_plot', default='loss_curve.png', type=str, help='path to save loss curve image')
     parser.add_argument('--show_loss_plot', action='store_true', help='show loss curve after training')
     parser.add_argument('--crop_size', default=256, type=int, help='random/center crop size')
-
+    parser.add_argument('--model',default="unet",choices=("unet","deeplabv3"),type=str)
     parser.add_argument('--resume', default=False, type=str,action='store_true', help='resume training from checkpoint')
     
     args=parser.parse_args()
@@ -90,7 +91,10 @@ if __name__=="__main__":
 
 
     if args.resume:
-        model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
+        if args.model == "unet":
+            model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
+        elif args.model == "deeplabv3":
+            model=get_DeepLabV3(num_classes=8).to(device)
         output_dir = Path(__file__).resolve().parent / "output"
         pth_path = output_dir / "unet_uavid_10e.pth"
         if pth_path.exists():
@@ -99,8 +103,11 @@ if __name__=="__main__":
         else:
             print(f"No checkpoint found at: {pth_path}. Starting training from scratch.")
     else:
-        model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
-    
+        if args.model == "unet":
+                model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
+        elif args.model == "deeplabv3":
+                model=get_DeepLabV3(num_classes=8).to(device)
+        
 
 
     total_loss=[]
@@ -142,7 +149,10 @@ if __name__=="__main__":
     # ---- 保存模型 ----
     output_dir = Path(__file__).resolve().parent / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
-    pth_path = output_dir+"unet_uavid_10e.pth"
+    if args.model == "unet":
+        pth_path = output_dir+"unet_uavid_10e.pth"
+    elif args.model == "deeplabv3":
+        pth_path = output_dir+"deeplabv3_uavid_10e.pth"
     torch.save(model.state_dict(), pth_path)
     print(f"Model weights saved to: {pth_path}")
 
