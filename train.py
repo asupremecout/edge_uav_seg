@@ -8,7 +8,7 @@ from models.deeplabv3 import get_DeepLabV3
 import argparse
 from pathlib import Path
 from losses.combined_loss import conbined_loss
-
+from models.SegFormer import get_segformer
 device=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu") 
 amp_enabled = device.type == "cuda"
 
@@ -55,8 +55,6 @@ def plot_loss_curve(loss_values, save_path=None, show=False):
     plt.close()
 
 
-
-
 def store_model(model,output_dir):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -77,7 +75,7 @@ if __name__=="__main__":
     parser.add_argument('--loss_plot', default='loss_curve.png', type=str, help='path to save loss curve image')
     parser.add_argument('--show_loss_plot', action='store_true', help='show loss curve after training')
     parser.add_argument('--crop_size', default=256, type=int, help='random/center crop size')
-    parser.add_argument('--model',default="unet",choices=("unet","deeplabv3"),type=str)
+    parser.add_argument('--model',default="unet",choices=("unet","deeplabv3","segformer"),type=str)
     parser.add_argument('--resume', type=str, default=None, help='resume from checkpoint path')
     
     args=parser.parse_args()
@@ -95,6 +93,8 @@ if __name__=="__main__":
             model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
         elif args.model == "deeplabv3":
             model=get_DeepLabV3(num_classes=8).to(device)
+        elif args.model == "segformer":
+            model=get_segformer(num_classes=8).to(device)
         output_dir = Path(__file__).resolve().parent / "output"
         pth_path = output_dir / "unet_uavid_10e.pth"
         if pth_path.exists():
@@ -107,7 +107,8 @@ if __name__=="__main__":
                 model=get_unet(in_channels=3,num_classes=8,out_features=64).to(device)
         elif args.model == "deeplabv3":
                 model=get_DeepLabV3(num_classes=8).to(device)
-        
+        elif args.model == "segformer":
+                model=get_segformer(num_classes=8).to(device)
 
 
     total_loss=[]
@@ -153,6 +154,8 @@ if __name__=="__main__":
         pth_path = output_dir / "unet_uavid_10e.pth"
     elif args.model == "deeplabv3":
         pth_path = output_dir / "deeplabv3_uavid_10e.pth"
+    elif args.model == "segformer":
+        pth_path = output_dir / "segformer_uavid_10e.pth"
     torch.save(model.state_dict(), pth_path)
     print(f"Model weights saved to: {pth_path}")
 
