@@ -78,7 +78,7 @@ if __name__=="__main__":
     parser.add_argument('--show_loss_plot', action='store_true', help='show loss curve after training')
     parser.add_argument('--crop_size', default=256, type=int, help='random/center crop size')
     parser.add_argument('--model',default="unet",choices=("unet","deeplabv3"),type=str)
-    parser.add_argument('--resume', default=False, type=str,action='store_true', help='resume training from checkpoint')
+    parser.add_argument('--resume', type=str, default=None, help='resume from checkpoint path')
     
     args=parser.parse_args()
     
@@ -150,9 +150,9 @@ if __name__=="__main__":
     output_dir = Path(__file__).resolve().parent / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
     if args.model == "unet":
-        pth_path = output_dir+"unet_uavid_10e.pth"
+        pth_path = output_dir / "unet_uavid_10e.pth"
     elif args.model == "deeplabv3":
-        pth_path = output_dir+"deeplabv3_uavid_10e.pth"
+        pth_path = output_dir / "deeplabv3_uavid_10e.pth"
     torch.save(model.state_dict(), pth_path)
     print(f"Model weights saved to: {pth_path}")
 
