@@ -12,6 +12,8 @@ from pathlib import Path
 from losses.combined_loss import conbined_loss
 from models.SegFormer import get_segformer
 from datasets.UAVdatasets import NUM_CLASSES, UAVID_CLASSES
+
+from models.unet_modefied import get_unet_modefied
 device=torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 amp_enabled = device.type == "cuda"
 
@@ -113,10 +115,11 @@ if __name__=="__main__":
     parser.add_argument('--loss_plot', default='loss_curve.png', type=str, help='path to save loss curve image')
     parser.add_argument('--show_loss_plot', action='store_true', help='show loss curve after training')
     parser.add_argument('--crop_size', default=512, type=int, help='random/center crop size, 4K图必须裁剪')
-    parser.add_argument('--model',default="unet",choices=("unet","deeplabv3","segformer"),type=str)
+    parser.add_argument('--model',default="unet",choices=("unet","deeplabv3","segformer","unet_modefied"),type=str)
     parser.add_argument('--resume', type=str, default=None, help='resume from checkpoint path')
     parser.add_argument('--val_interval', default=1, type=int, help='每几个epoch验证一次mIoU')
     parser.add_argument('--num_workers', default=4, type=int, help='DataLoader多进程读图, 0=主进程串行(慢)')
+    parser.add_argument('--segformer_layers', default=4, type=int, choices=[3,4], help='SegFormer层数: 3=轻量(31M), 4=标准(59M)')
 
     args=parser.parse_args()
 
@@ -137,7 +140,9 @@ if __name__=="__main__":
         elif args.model == "deeplabv3":
             model=get_DeepLabV3(num_classes=8).to(device)
         elif args.model == "segformer":
-            model=get_segformer(num_classes=8).to(device)
+            model=get_segformer(num_layers=args.segformer_layers).to(device)
+        elif args.model == "unet_modefied":
+            model=get_unet_modefied(in_channels=3,num_classes=8,out_features=64).to(device)
         output_dir = Path(__file__).resolve().parent / "output"
         pth_path = output_dir / "unet_uavid_10e.pth"
         if pth_path.exists():
@@ -151,7 +156,9 @@ if __name__=="__main__":
         elif args.model == "deeplabv3":
                 model=get_DeepLabV3(num_classes=8).to(device)
         elif args.model == "segformer":
-                model=get_segformer(num_classes=8).to(device)
+                model=get_segformer(num_layers=args.segformer_layers).to(device)
+        elif args.model == "unet_modefied":
+                model=get_unet_modefied(in_channels=3,num_classes=8,out_features=64).to(device)
 
 
     total_loss=[]
@@ -214,6 +221,8 @@ if __name__=="__main__":
         pth_path = output_dir / "deeplabv3_uavid_10e.pth"
     elif args.model == "segformer":
         pth_path = output_dir / "segformer_uavid_10e.pth"
+    elif args.model == "unet_modefied":
+        pth_path = output_dir / "unet_modefied_uavid_10e.pth"
     torch.save(model.state_dict(), pth_path)
     print(f"Model weights saved to: {pth_path}")
 

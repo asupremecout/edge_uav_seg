@@ -98,7 +98,8 @@ class UAVIDDataset(Dataset):
         if self.augment:
             img, lbl = self._augment(img, lbl)
 
-        # 3) 转 tensor:img -> [3,H,W] float;  lbl -> [H,W] long(trainId)
+        # 3) 转 tensor:img -> [3,H,W] float;  lbl -> [H,W] long(trainId) 
+        #手动拿出某一张图像需要手动实现to_tensor
         img = TF.to_tensor(img)
         mask = self._rgb_to_trainid(np.array(lbl))
         mask = torch.as_tensor(mask, dtype=torch.long)

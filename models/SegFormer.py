@@ -226,13 +226,3 @@ def get_segformer(num_layers):
         raise ValueError("num_layers must be 3 or 4")
 
     return model
-
-
-
-
-
-
-
-
-
-
